@@ -1,0 +1,17 @@
+services:
+  app:
+    image: franchyze923/strava-db-sync:1.0.2
+    environment:
+      DATABASE_URL: mongodb+srv://:@
+      STRAVA_CLIENT_ID: ""
+      STRAVA_CLIENT_SECRET: ""
+      STRAVA_REFRESH_TOKEN: ""
+      SYNC_INTERVAL: "1"  # Default to 1 hour
+      ACTIVITIES_PER_PAGE: "200"  # Default to 50 activities per page     
+    volumes:
+      - .:/logs
+    # command overrides whatever command is in the dockerfile
+    command: python strava_db_sync_mongodb_atlas.py
+
+volumes:
+  db_data:

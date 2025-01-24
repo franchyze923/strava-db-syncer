@@ -5,6 +5,7 @@ import polyline
 import time
 from pymongo import MongoClient
 import logging
+from logging.handlers import RotatingFileHandler
 
 # -----------------------------------------------------------------------------
 # 1. Configuration
@@ -24,14 +25,18 @@ ACTIVITIES_PER_PAGE = int(os.environ.get('ACTIVITIES_PER_PAGE', 200))  # Default
 def setup_logging():
     os.makedirs('/logs', exist_ok=True)
     log_filename = f"/logs/sync_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_filename),
-            logging.StreamHandler()
-        ]
-    )
+    handler = RotatingFileHandler(log_filename, maxBytes=10*1024*1024, backupCount=5)
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(message)s')
+    handler.setFormatter(formatter)
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
+
+    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().addHandler(handler)
+    logging.getLogger().addHandler(console_handler)
 
 # -----------------------------------------------------------------------------
 # 3. MongoDB Setup

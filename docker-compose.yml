@@ -1,6 +1,6 @@
 services:
   db-sync:
-    image: franchyze923/strava-db-sync:1.0.3
+    image: franchyze923/strava-db-sync:1.0.5
     container_name: strava-db-syncer
     environment:
       DATABASE_URL: mongodb+srv://user:pw@

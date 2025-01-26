@@ -52,7 +52,8 @@ def connect_to_db():
 
 def initialize_db():
     db = connect_to_db()
-    db.activities.create_index("id", unique=True)
+    db.activities.create_index("id", unique=True)  # Ensure unique activity IDs
+    db.activities.create_index([("route", "2dsphere")])  # Geospatial index for route
     logging.info("Database initialized.")
 
 # -----------------------------------------------------------------------------
@@ -100,37 +101,44 @@ def save_activities_to_db(activities):
 
     for activity in activities:
         try:
-            # Extract polyline and decode it
-            map_data = activity.get('map', {})
-            polyline_data = map_data.get('summary_polyline')
-            decoded_polyline = polyline.decode(polyline_data) if polyline_data else None
+            # Extract polyline and decode it into GeoJSON LineString
+            map_data = activity.get("map", {})
+            polyline_data = map_data.get("summary_polyline")
+            geojson_route = None
+
+            if polyline_data:
+                decoded_polyline = polyline.decode(polyline_data)
+                # Swap latitude and longitude to ensure [longitude, latitude] order
+                geojson_route = {
+                    "type": "LineString",
+                    "coordinates": [[coord[1], coord[0]] for coord in decoded_polyline]
+                }
 
             # Insert activity into the database
             activity_document = {
-                "id": activity['id'],
-                "name": activity['name'],
-                "type": activity['type'],
-                "distance": activity.get('distance'),
-                "moving_time": activity.get('moving_time'),
-                "elapsed_time": activity.get('elapsed_time'),
-                "total_elevation_gain": activity.get('total_elevation_gain'),
-                "sport_type": activity.get('sport_type'),
-                "start_date": datetime.strptime(activity['start_date'], "%Y-%m-%dT%H:%M:%SZ"),
-                "start_date_local": datetime.strptime(activity['start_date_local'], "%Y-%m-%dT%H:%M:%S%z"),
-                "timezone": activity.get('timezone'),
+                "id": activity["id"],
+                "name": activity["name"],
+                "type": activity["type"],
+                "distance": activity.get("distance"),
+                "moving_time": activity.get("moving_time"),
+                "elapsed_time": activity.get("elapsed_time"),
+                "total_elevation_gain": activity.get("total_elevation_gain"),
+                "sport_type": activity.get("sport_type"),
+                "start_date": datetime.strptime(activity["start_date"], "%Y-%m-%dT%H:%M:%SZ"),
+                "start_date_local": datetime.strptime(activity["start_date_local"], "%Y-%m-%dT%H:%M:%S%z"),
+                "timezone": activity.get("timezone"),
                 "map": map_data,  # Store map as JSON
-                "polyline": polyline_data,  # Store the raw polyline string
-                "decoded_polyline": decoded_polyline,  # Store decoded polyline as JSON
-                "gear": activity.get('gear'),  # Store gear as JSON
-                "average_speed": activity.get('average_speed'),
-                "max_speed": activity.get('max_speed'),
-                "average_cadence": activity.get('average_cadence'),
-                "average_heartrate": activity.get('average_heartrate'),
-                "max_heartrate": activity.get('max_heartrate'),
-                "calories": activity.get('calories'),
-                "raw_data": activity  # Store raw activity data as JSON
+                "route": geojson_route,  # Store route in GeoJSON format
+                "gear": activity.get("gear"),  # Store gear as JSON
+                "average_speed": activity.get("average_speed"),
+                "max_speed": activity.get("max_speed"),
+                "average_cadence": activity.get("average_cadence"),
+                "average_heartrate": activity.get("average_heartrate"),
+                "max_heartrate": activity.get("max_heartrate"),
+                "calories": activity.get("calories"),
+                "raw_data": activity,  # Store raw activity data as JSON
             }
-            collection.update_one({"id": activity['id']}, {"$set": activity_document}, upsert=True)
+            collection.update_one({"id": activity["id"]}, {"$set": activity_document}, upsert=True)
             logging.info(f"Saved activity {activity['id']} - {activity['name']} to the database.")
         except Exception as e:
             logging.error(f"Error saving activity {activity['id']}: {e}")

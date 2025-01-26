@@ -3,7 +3,7 @@ services:
     image: franchyze923/strava-db-sync:1.0.3
     container_name: strava-db-syncer
     environment:
-      DATABASE_URL: mongodb+srv://user:pw@cluster0.q8vp6.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      DATABASE_URL: mongodb+srv://user:pw@
       STRAVA_CLIENT_ID: ""
       STRAVA_CLIENT_SECRET: ""
       STRAVA_REFRESH_TOKEN: ""
@@ -18,7 +18,7 @@ services:
     image: franchyze923/strava-fastapi:1.0.0
     container_name: strava-fastapi
     environment:
-      MONGO_URI: mongodb+srv://user:pw@cluster0.q8vp6.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      MONGO_URI: mongodb+srv://user:pw@
       LOG_DIR: /logs
     volumes:
       - .:/logs

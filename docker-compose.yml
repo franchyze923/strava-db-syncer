@@ -1,17 +1,30 @@
 services:
-  app:
-    image: franchyze923/strava-db-sync:1.0.2
+  db-sync:
+    image: franchyze923/strava-db-sync:1.0.3
+    container_name: strava-db-syncer
     environment:
-      DATABASE_URL: mongodb+srv://:@
+      DATABASE_URL: mongodb+srv://user:pw@cluster0.q8vp6.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       STRAVA_CLIENT_ID: ""
       STRAVA_CLIENT_SECRET: ""
       STRAVA_REFRESH_TOKEN: ""
-      SYNC_INTERVAL: "1"  # Default to 1 hour
-      ACTIVITIES_PER_PAGE: "200"  # Default to 50 activities per page     
+      SYNC_INTERVAL: "12"  # in hours
+      ACTIVITIES_PER_PAGE: "200"  # 200 is max 
     volumes:
       - .:/logs
     # command overrides whatever command is in the dockerfile
     command: python strava_db_sync_mongodb_atlas.py
+
+  fastapi-server:
+    image: franchyze923/strava-fastapi:1.0.0
+    container_name: strava-fastapi
+    environment:
+      MONGO_URI: mongodb+srv://user:pw@cluster0.q8vp6.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      LOG_DIR: /logs
+    volumes:
+      - .:/logs
+    ports:
+      - "8001:8000"  # Expose the FastAPI app on port 8000
+    restart: always
 
 volumes:
   db_data:

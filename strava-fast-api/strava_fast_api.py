@@ -5,24 +5,49 @@ from pydantic import BaseModel
 from datetime import datetime
 from fastapi.encoders import jsonable_encoder
 import os
+import logging
+from logging.handlers import RotatingFileHandler
+
 # -----------------------------------------------------------------------------
 # 1. Configuration
 # -----------------------------------------------------------------------------
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")  # Default to local MongoDB if env variable is not set
 DATABASE_NAME = "strava_db"
 COLLECTION_NAME = "activities"
+LOG_DIR = os.getenv("LOG_DIR", "./logs")
 
 client = MongoClient(MONGO_URI)
 db = client[DATABASE_NAME]
 collection = db[COLLECTION_NAME]
 
 # -----------------------------------------------------------------------------
-# 2. FastAPI App
+# 2. Logging Setup
+# -----------------------------------------------------------------------------
+def setup_logging():
+    os.makedirs(LOG_DIR, exist_ok=True)
+    log_filename = f"{LOG_DIR}/api_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+    handler = RotatingFileHandler(log_filename, maxBytes=10*1024*1024, backupCount=5)
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(message)s')
+    handler.setFormatter(formatter)
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
+
+    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().addHandler(handler)
+    logging.getLogger().addHandler(console_handler)
+
+setup_logging()
+
+# -----------------------------------------------------------------------------
+# 3. FastAPI App
 # -----------------------------------------------------------------------------
 app = FastAPI()
 
 # -----------------------------------------------------------------------------
-# 3. Pydantic Models for Validation
+# 4. Pydantic Models for Validation
 # -----------------------------------------------------------------------------
 class Activity(BaseModel):
     id: int
@@ -47,11 +72,12 @@ class Activity(BaseModel):
     photos: Optional[List[str]] = None
 
 # -----------------------------------------------------------------------------
-# 4. API Endpoints
+# 5. API Endpoints
 # -----------------------------------------------------------------------------
 
 @app.get("/")
 def read_root():
+    logging.info("Root endpoint accessed")
     return {"message": "Welcome to the Strava Activities API!"}
 
 
@@ -64,6 +90,8 @@ def get_activities(
     """
     Get activities with optional pagination. Default is to return all activities.
     """
+    logging.info(f"Fetching activities with limit={limit}, offset={offset}, include_polyline={include_polyline}")
+    
     # If no limit is provided, fetch all activities
     if limit is None:
         activities = list(collection.find().skip(offset))
@@ -82,6 +110,7 @@ def get_activities(
         if not include_polyline:
             activity.pop("decoded_polyline", None)
 
+    logging.info(f"Fetched {len(activities)} activities")
     return jsonable_encoder(activities)
 
 
